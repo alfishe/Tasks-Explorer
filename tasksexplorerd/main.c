@@ -37,7 +37,8 @@ int init(void)
 {
      openlog("taskexplorerd", LOG_PID, LOG_DAEMON);
 
-     if (geteuid() != 0) {
+     if (geteuid() != 0)
+     {
           syslog(LOG_EMERG, "must be run as root");         
           return EACCES;
      }
@@ -48,7 +49,9 @@ int init(void)
 int main (int argc, const char * argv[]) 
 {
      int ret = init();
-     if (ret != 0) {
+
+     if (ret != 0)
+     {
           return ret;
      }
 
@@ -56,7 +59,8 @@ int main (int argc, const char * argv[])
 
      ret = task_info_manager_init();
 
-     if (ret != 0) {
+     if (ret != 0)
+     {
           syslog(LOG_EMERG, "init_task_info_manager failed with error = %d", ret);
           return ret;
      }

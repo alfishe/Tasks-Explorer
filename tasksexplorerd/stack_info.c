@@ -165,6 +165,7 @@ void stack_info_init()
 {
 	if (0 != inited)
 		return;
+
 	inited = 1;
 	pthread_rwlock_init(&proc_list_loc, NULL);
 }
@@ -181,21 +182,24 @@ void stack_info_free_task_stack(task_record_t *task)
 	searched_process.key = task->pid;
 	
 	pthread_rwlock_wrlock(&proc_list_loc);
-	if( NULL != (process = sglib_pid_tree_t_find_member(processes_tree, &searched_process)) )
+	if (NULL != (process = sglib_pid_tree_t_find_member(processes_tree, &searched_process)))
 	{
 		struct sglib_call_stack_tree_t_iterator it;
 		call_stack_tree_t *te;
 
 		pthread_rwlock_wrlock(&process->call_stack_lock);
-		for(te=sglib_call_stack_tree_t_it_init(&it,process->call_stacks); te!=NULL; te=sglib_call_stack_tree_t_it_next(&it)) 
+
+		for (te=sglib_call_stack_tree_t_it_init(&it,process->call_stacks); te!=NULL; te=sglib_call_stack_tree_t_it_next(&it)) 
 		{
 			free(te->descr);
 			free(te);
 		}
+
 		sglib_pid_tree_t_delete(&processes_tree, process);
 		free(process);
 		pthread_rwlock_unlock(&process->call_stack_lock);
 	}
+
 	pthread_rwlock_unlock(&proc_list_loc);	
 }
 
@@ -246,13 +250,16 @@ static int update_names_for_pid(pid_t pid, thread_record_t **threads, uint32_t c
     for (cur_thrd=0; cur_thrd < count; ++cur_thrd)
     {
         thread = threads[cur_thrd];
+
         for (cur_frame=0; cur_frame < thread->stack_records_count; ++cur_frame)
         {
             stack = thread->call_stack[cur_frame];
 
             if (0 != stack->func_name)
                 continue;
+
             char *func_name = find_func_name(pid, stack->return_addr);
+
             if (func_name)
 			{
                 stack->func_name = func_name;
@@ -275,7 +282,6 @@ static int update_names_for_pid(pid_t pid, thread_record_t **threads, uint32_t c
 	{
 		free(update_info);
 	}
-
 	
     return 0;
 }
@@ -285,7 +291,8 @@ static int build_stacks_for_pid(pid_t pid, thread_record_t **threads, uint32_t c
     char tracebuf[TRACEBUFF_LEN];
     char *tracepos = tracebuf;
     int result = syscall(SYS_stack_snapshot, pid, tracebuf, TRACEBUFF_LEN, 0);
-    if( -1 == result )
+
+    if(-1 == result)
         return -1;
 
     task_snapshot_t *snapshot = (task_snapshot_t*)tracepos;
@@ -329,6 +336,7 @@ static int build_stacks_for_pid(pid_t pid, thread_record_t **threads, uint32_t c
                 thread->call_stack[item_pos]->return_addr = addr->return_addr;
                 thread->call_stack[item_pos]->frame_addr = addr->frame_addr;
             }
+
             tracepos += sizeof(stack_record_t);
         }
 
@@ -354,15 +362,18 @@ static char* find_func_name(pid_t pid, unsigned long addr)
 	char *result = 0;
 
 	pthread_rwlock_rdlock(&proc_list_loc);
-	if( NULL != (process = sglib_pid_tree_t_find_member(processes_tree, &searched_process)) )
+	if (NULL != (process = sglib_pid_tree_t_find_member(processes_tree, &searched_process)))
 	{
 		pthread_rwlock_rdlock(&process->call_stack_lock);
+
 		if ( NULL != (addr_info = sglib_call_stack_tree_t_find_member(process->call_stacks, &searched_adress)))
 		{
 			result = addr_info->descr;
 		}
+
 		pthread_rwlock_unlock(&process->call_stack_lock);
 	}
+
 	pthread_rwlock_unlock(&proc_list_loc);
 
     return result;
@@ -393,6 +404,7 @@ static void update_process_stacks(void *context)
 	searched_process.key = update_info->pid;
 
 	process = sglib_pid_tree_t_find_member(processes_tree, &searched_process);
+
 	if (NULL == process)
 	{
 		process = calloc(1, sizeof(pid_tree_t));
@@ -413,6 +425,7 @@ static void update_process_stacks(void *context)
 
 	call_stack_tree_t *addr_info = 0;
 	addr_list_t *cur_addr = update_info->addresses;
+
 	while (fgets(&buff[0], BUFF_LEN, out) && cur_addr)
     {
 		addr_info = calloc(1, sizeof(call_stack_tree_t));
@@ -421,6 +434,7 @@ static void update_process_stacks(void *context)
 		sglib_call_stack_tree_t_add(&process->call_stacks, addr_info);
 		cur_addr = cur_addr->next_ptr;
     }
+
 	pthread_rwlock_unlock(&process->call_stack_lock);
     pclose(out);	
 
@@ -428,6 +442,7 @@ static void update_process_stacks(void *context)
 	{
 		free(ll);
 	});
+
 	free(update_info);
 	
 #undef BUFF_LEN

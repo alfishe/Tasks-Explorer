@@ -41,7 +41,8 @@
 //////////////////////////////////////////////////
 // Process description map
 //////////////////////////////////////////////////
-typedef struct descr_tree {
+typedef struct descr_tree
+{
 	char *key;
 	char *descr;
 	char color_field;
@@ -66,7 +67,7 @@ static pthread_mutex_t descr_tree_lock;
 // Internal function prototypes
 //////////////////////////////////////////////////
 
-static char* get_man_by_name( const char* name );
+static char* get_man_by_name(const char* name);
 static void update_info(void *context);
 
 //////////////////////////////////////////////////
@@ -76,7 +77,8 @@ static void update_info(void *context);
 
 int man_info_init()
 {
-    if (man_info_tree) {
+    if (man_info_tree)
+    {
         return 0;
     }
 
@@ -91,10 +93,11 @@ void man_info_free()
     void *status;
 	struct sglib_descr_tree_iterator  it;
 
-	for(te=sglib_descr_tree_it_init(&it,man_info_tree); te!=NULL; te=sglib_descr_tree_it_next(&it)) {
-		free( te->descr );
-		free( te->key );
-		free( te );
+	for (te=sglib_descr_tree_it_init(&it,man_info_tree); te!=NULL; te=sglib_descr_tree_it_next(&it))
+    {
+		free(te->descr);
+		free(te->key);
+		free(te);
 	}
 
     is_active = 0;
@@ -103,22 +106,25 @@ void man_info_free()
     pthread_exit(NULL);
 }
 
-const char* man_info_get_descr_by_name( const char *name )
+const char* man_info_get_descr_by_name(const char *name)
 {
 	const char *result = 0;
     
 	struct descr_tree e, *t;
 	e.key = (char*)name;
     pthread_mutex_lock(&descr_tree_lock);
-	if( NULL != (t = sglib_descr_tree_find_member(man_info_tree, &e)) ){
+
+	if (NULL != (t = sglib_descr_tree_find_member(man_info_tree, &e)))
+    {
 		result = t->descr;
 	}
+
     pthread_mutex_unlock(&descr_tree_lock);
 	
 	return result;
 }
 
-void man_info_add_descr_by_name( const char *name )
+void man_info_add_descr_by_name(const char *name)
 {
 	dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
 	dispatch_async_f(queue, (void*)strdup(name), update_info);
@@ -137,52 +143,67 @@ static void update_info(void *context)
 	e.key = process_name;
 
 	pthread_mutex_lock(&descr_tree_lock);
-	if( NULL == sglib_descr_tree_find_member(man_info_tree, &e) ){
+
+	if (NULL == sglib_descr_tree_find_member(man_info_tree, &e))
+    {
 		t = malloc(sizeof(struct descr_tree));
+
 		t->key = process_name;
-		t->descr = get_man_by_name( process_name );
+		t->descr = get_man_by_name(process_name);
 		sglib_descr_tree_add(&man_info_tree, t);
 	}
-	else {
+	else
+    {
 		free(process_name);
 	}
 
 	pthread_mutex_unlock(&descr_tree_lock);
 }
 
-static char* get_man_by_name( const char* name )
+static char* get_man_by_name(const char* name)
 {
 #define buff_len 1024
 	char *result = 0;
 	const char *cmd_fmt = "man %s | col -b";
 	char cmd_line[buff_len] = {};
     
-	if (buff_len <= (strlen( name ) + strlen( cmd_fmt ) ) ) {
+	if (buff_len <= (strlen(name) + strlen( cmd_fmt)))
+    {
 		return 0;
 	}
 	
 	snprintf( cmd_line, buff_len, cmd_fmt, name);
     
-	FILE *out = popen( cmd_line, "r" );
+	FILE *out = popen(cmd_line, "r");
 	char buff[buff_len] = {};
 	char *position = 0;
 	int len = 0;
 
-	while (!fgetc(out)) {}
-	while (fgets(buff, buff_len-1, out)) {
-		if ( 0 == strncmp("NAME", buff, 4) ) {
-			if( fgets(buff, buff_len-1, out) ) {
+	while (!fgetc(out))
+    {}
+
+	while (fgets(buff, buff_len-1, out))
+    {
+		if (0 == strncmp("NAME", buff, 4))
+        {
+			if (fgets(buff, buff_len-1, out))
+            {
 				position = buff;
-				while (' ' == *position) {
+
+				while (' ' == *position)
+                {
 					position++;
 				}
+
 				len = strchr(position, '\n') - position;
 				result = calloc(len+1, sizeof(char));
 				strncpy(result, position, len);
+
 				break;
 			}
 		}
 	}
+
     pclose(out);
     
 	return result;

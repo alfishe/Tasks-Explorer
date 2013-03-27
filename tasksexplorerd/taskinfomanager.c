@@ -39,7 +39,7 @@
 
 
 #define   TIME_VALUE_TO_TIMEVAL(a, r) do {   \
-     (r)->tv_sec = (a)->seconds;                  \
+     (r)->tv_sec = (a)->seconds;             \
      (r)->tv_usec = (a)->microseconds;       \
 } while (0)
 
@@ -52,7 +52,8 @@ static CFMutableDictionaryRef tasks_dict;
 static host_record_t host_info_record={};
 natural_t processor_count;
 
-struct app_path_name {
+struct app_path_name
+{
      char*     app_name; 
      char**    argv;
      int       argc;
@@ -103,7 +104,8 @@ host_record_t* task_manager_get_host_info()
 int task_info_manager_init(void) 
 {
     static int completed = FALSE;
-    if (completed == TRUE) {
+    if (completed == TRUE)
+    {
         return 0;
     }
 
@@ -113,7 +115,8 @@ int task_info_manager_init(void)
 
     task_manager_port = mach_host_self();
     kr = host_get_host_priv_port(task_manager_port, &host_priv);
-    if (KERN_SUCCESS == kr) {
+    if (KERN_SUCCESS == kr)
+    {
         host_processors(host_priv, &processor_list, &processor_count);
     }
 
@@ -127,7 +130,8 @@ int task_info_manager_init(void)
     size_t size;
 
     size = sizeof(host_info_record.memsize);
-    if (sysctl(mib, 2, &host_info_record.memsize, &size, NULL, 0) == -1) {
+    if (sysctl(mib, 2, &host_info_record.memsize, &size, NULL, 0) == -1)
+    {
         syslog(LOG_WARNING, "%s, Error in sysctl(): %m", __FUNCTION__);
         return -1;
     }
@@ -152,24 +156,30 @@ void task_info_manager_free(void)
 /// The call update active tasks information.
 int task_info_manager_update()
 {
-     int ret;
+    int ret;
 
-     host_info_record.seq++;
-	host_info_record.cpu_user = 0;
+    host_info_record.seq++;
+    host_info_record.cpu_user = 0;
 	host_info_record.cpu_kernel = 0;
 
      ret = read_host_info();
-     if (ret != 0) {
+     if (ret != 0)
+     {
           return ret;
      }
+    
      ret = read_tasks_table();
-     if (ret != 0) {
+     if (ret != 0)
+     {
           return ret;
      }
+    
      ret = remove_killed_process();
-     if (ret != 0) {
+     if (ret != 0)
+     {
           return ret;
      }
+    
      return 0;
 }
 
@@ -180,7 +190,8 @@ size_t task_info_manager_get_tasks_count()
 }
 
 /// internal structure for collecting pid list.
-struct pid_builder_struct {
+struct pid_builder_struct
+{
      int pos;
      void *array;
 };
@@ -221,7 +232,8 @@ static void build_killed_array(const void *key, const void *data, void *array)
      task_record_t *task = (task_record_t*)data;
      task_record_t **tasks_array = (task_record_t**)arr_helper->array;
 
-     if (task->seq != host_info_record.seq) {
+     if (task->seq != host_info_record.seq)
+     {
 		   tasks_array[arr_helper->pos] = task;
 		   arr_helper->pos++;
      }
@@ -236,7 +248,9 @@ static int remove_killed_process()
      pid_builder.array = &killed_list;
 
      CFDictionaryApplyFunction(tasks_dict, build_killed_array, (void*)&pid_builder);
-     for (i = 0; i < pid_builder.pos; i++) {
+    
+     for (i = 0; i < pid_builder.pos; i++)
+     {
           CFDictionaryRemoveValue(tasks_dict, killed_list[i]);
      }
 
@@ -264,29 +278,35 @@ static int read_tasks_table(void)
      mach_msg_type_number_t   i, j, pcnt, tcnt;
 
      kr = host_processor_sets(task_manager_port, &psets, &pcnt);
-    if (kr != KERN_SUCCESS) {
+    if (kr != KERN_SUCCESS)
+    {
           syslog(LOG_ERR, "error in host_processor_sets(): %s", mach_error_string(kr));
           return -1;
      }
 
-     for (i = 0; i < pcnt; i++) {
+     for (i = 0; i < pcnt; i++)
+     {
           kr = host_processor_set_priv(task_manager_port, psets[i], &pset);
-          if (kr != KERN_SUCCESS) {
+          if (kr != KERN_SUCCESS)
+          {
                syslog(LOG_ERR, "error in host_processor_set_priv(): %s", mach_error_string(kr));
                return -1;
           }
 
           kr = processor_set_tasks(pset, &tasks, &tcnt);
-          if (kr != KERN_SUCCESS) {
+          if (kr != KERN_SUCCESS)
+          {
                syslog(LOG_ERR, "error in processor_set_tasks(): %s", mach_error_string(kr));
                return -1;
           }
 
-          for (j = 0; j < tcnt; j++) {
+          for (j = 0; j < tcnt; j++)
+          {
                read_task_info(tasks[j]);
 
                kr = mach_port_deallocate(mach_task_self(), tasks[j]);
-               if (kr != KERN_SUCCESS) {
+               if (kr != KERN_SUCCESS)
+               {
                     syslog(LOG_WARNING, "%s, error in mach_port_deallocate(): %s", __FUNCTION__, mach_error_string(kr));
                }
           }
@@ -294,6 +314,7 @@ static int read_tasks_table(void)
           kr = mach_port_deallocate(mach_task_self(), pset);
           kr = mach_port_deallocate(mach_task_self(), psets[i]);
      }
+
      kr = vm_deallocate(mach_task_self(), (vm_address_t)psets, pcnt * sizeof(processor_set_t));
 
      return 0;
@@ -311,9 +332,11 @@ static int read_task_info(task_t task)
     task_record_t *task_info, *tmp_info;
     int new_task = FALSE;
 
-    do {
+    do
+    {
         kr = pid_for_task(task, &pid);
-        if (kr != KERN_SUCCESS) {
+        if (kr != KERN_SUCCESS)
+        {
            syslog(LOG_WARNING, "error in pid_for_task(%i): %s", task, mach_error_string(kr));
            break;
         }
@@ -325,48 +348,57 @@ static int read_task_info(task_t task)
         }
 
         task_info = task_info_manager_find_task(pid);
-        if (task_info == NULL) {
+        if (task_info == NULL)
+        {
             task_info = malloc(sizeof(task_record_t));
             memset(task_info, 0, sizeof(task_record_t));
             if (task_info == NULL) {
                 syslog(LOG_ERR, "%s, error in malloc(): %m", __FUNCTION__);
                 break;
            }
+
             task_info->pid = pid;
             new_task = TRUE;
         }
 
         res = update_task_from_kinfo(&kinfo, task_info);
-        if (res != 0) {
+        if (res != 0)
+        {
            free_task_record(task_info);
            break;
         }
+
         res = update_task_from_task_info(task, task_info);
-        if (res != 0) {
+        if (res != 0)
+        {
            free_task_record(task_info);
            break;
         }
 
         res = update_threads_info(task, task_info);
-        if (res != 0) {
+        if (res != 0)
+        {
            free_task_record(task_info);
            break;
         }
 
         res = cpu_type_for_pid(task_info->pid, &task_info->cputype);
-        if (res != 0) {
+        if (res != 0)
+        {
            free_task_record(task_info);
            break;
         }
 
         res = get_mach_ports(task, task_info);
-        if (res != 0) {
+        if (res != 0)
+        {
            free_task_record(task_info);
            break;
         }
 
         res = update_cpu_info(task_info, new_task);
-        if (res != 0) {
+        if (res != 0)
+        {
            free_task_record(task_info);
            break;
         }
@@ -375,11 +407,13 @@ static int read_task_info(task_t task)
         stack_info_update_task_stack(task_info);
 
         tmp_info = (task_record_t*)CFDictionaryGetValue(tasks_dict, task_info);
-        if (tmp_info == NULL) {
+        if (tmp_info == NULL)
+        {
             CFDictionaryAddValue(tasks_dict, task_info, task_info);
         }
 
-    } while (FALSE);
+    }
+    while (FALSE);
 
     return ((res == 0) ? 0 : -1);
 }
@@ -392,7 +426,8 @@ static int update_task_from_task_info(task_t task, task_record_t *info)
 
      count = TASK_BASIC_INFO_64_COUNT;
      kr = task_info(task, TASK_BASIC_INFO_64, (task_info_t)&ti, &count);
-     if (kr != KERN_SUCCESS) {
+     if (kr != KERN_SUCCESS)
+     {
           syslog(LOG_WARNING, "error in task_info(%i): %s", task, mach_error_string(kr));
           return -1;
      }
@@ -417,7 +452,8 @@ static int update_cpu_info(task_record_t *task, int new_task)
      struct timeval elapsed, used_user, used_kernel;
      int whole_user = 0, part_user = 0, whole_kernel = 0, part_kernel = 0;
 
-     if (new_task) {
+     if (new_task)
+     {
           task->p_time_user = task->time_user;
           task->p_time_kernel = task->time_kernel;
      }
@@ -425,28 +461,26 @@ static int update_cpu_info(task_record_t *task, int new_task)
      timersub(&host_info_record.time, &host_info_record.p_time, &elapsed);
      timersub(&task->time_user, &task->p_time_user, &used_user);
      timersub(&task->time_kernel, &task->p_time_kernel, &used_kernel);
-    elapsed_us = (unsigned long long)elapsed.tv_sec * 1000000ULL
-     + (unsigned long long)elapsed.tv_usec;
+    
+     elapsed_us = (unsigned long long)elapsed.tv_sec * 1000000ULL + (unsigned long long)elapsed.tv_usec;
+     used_us_user = (unsigned long long)used_user.tv_sec * 1000000ULL + (unsigned long long)used_user.tv_usec;
+     used_us_kernerl = (unsigned long long)used_kernel.tv_sec * 1000000ULL + (unsigned long long)used_kernel.tv_usec;
 
-    used_us_user = (unsigned long long)used_user.tv_sec * 1000000ULL
-     + (unsigned long long)used_user.tv_usec;
-    used_us_kernerl = (unsigned long long)used_kernel.tv_sec * 1000000ULL
-     + (unsigned long long)used_kernel.tv_usec;
-
-    if(elapsed_us > 0) {
+     if (elapsed_us > 0)
+     {
           whole_user = (used_us_user * 100ULL) / elapsed_us;
           part_user = (((used_us_user * 100ULL) - (whole_user * elapsed_us)) * 10ULL) / elapsed_us;
           whole_kernel = (used_us_kernerl * 100ULL) / elapsed_us;
           part_kernel = (((used_us_kernerl * 100ULL) - (whole_kernel * elapsed_us)) * 10ULL) / elapsed_us;
-    }
+     }
      
      task->cpu_usage_whole_user = whole_user;
      task->cpu_usage_part_user = part_user;
      task->cpu_usage_whole_kernel = whole_kernel;
      task->cpu_usage_part_kernel = part_kernel;
 
-	host_info_record.cpu_user += whole_user;
-	host_info_record.cpu_kernel += whole_kernel;
+	 host_info_record.cpu_user += whole_user;
+	 host_info_record.cpu_kernel += whole_kernel;
 
      result = 0;
 
@@ -463,7 +497,8 @@ static int update_task_from_kinfo(const struct kinfo_proc *kinfo, task_record_t 
      tinfo->uid = kinfo->kp_eproc.e_ucred.cr_uid;
      tinfo->ppid = kinfo->kp_eproc.e_ppid;
 
-     if (tinfo->app_name == NULL) { // first time call
+     if (tinfo->app_name == NULL)
+     { // first time call
           int ret;
           int argc;
           char *procargv;
@@ -472,30 +507,39 @@ static int update_task_from_kinfo(const struct kinfo_proc *kinfo, task_record_t 
           static int argmax = 0;
           size_t size = sizeof(argmax);
 
-          if (argmax == 0) {
+          if (argmax == 0)
+          {
                ret = sysctl(mib, 2, &argmax, &size, NULL, 0);
-               if (ret != 0) {
+               if (ret != 0)
+               {
                     syslog(LOG_EMERG, "%s, error in sysctl(): %m", __FUNCTION__);
                     return -1;
                }
           }
           
           procargv = malloc(argmax);
-          if (procargv == NULL) {
+
+          if (procargv == NULL)
+          {
                syslog(LOG_ERR, "%s, error in malloc(), %m", __FUNCTION__);
                return -1;
           }
+         
           mib[0] = CTL_KERN;
           mib[1] = KERN_PROCARGS2;
           mib[2] = kinfo->kp_proc.p_pid;
           size = (size_t)argmax;
           
           ret = sysctl(mib, 3, procargv, &size, NULL, 0);
-          if (ret != 0) {     // Probably we didn't have a permissions for access information for this process.
+          if (ret != 0)
+          {     // Probably we didn't have a permissions for access information for this process.
                free(procargv);
-               if (kinfo->kp_proc.p_pid == 0) {
+
+               if (kinfo->kp_proc.p_pid == 0)
+               {
                     tinfo->app_name = strdup("kernel_task");
                }
+
                return 0;
           }
 
@@ -518,14 +562,17 @@ static int update_task_from_kinfo(const struct kinfo_proc *kinfo, task_record_t 
 static void free_threads_array(thread_record_t **threads_arr, int count)
 {
     int cur_thread, cur_rec;
+
     for (cur_thread = 0; cur_thread <count; ++cur_thread)
     {
         for (cur_rec=0; cur_rec < threads_arr[cur_thread]->stack_records_count; ++cur_rec)
         {
             free(threads_arr[cur_thread]->call_stack[cur_rec]);
         }
+
         free(threads_arr[cur_thread]->call_stack);
     }
+
     free_arr((void**)threads_arr, count);
 }
 
@@ -541,7 +588,8 @@ static int update_threads_info(task_t task, task_record_t *tinfo)
      thread_record_t *thread;
 
      kr = task_threads(task, &threads_list, &threads_count);
-     if (kr != KERN_SUCCESS) {
+     if (kr != KERN_SUCCESS)
+     {
           syslog(LOG_WARNING, "error in task_threads(): %s", mach_error_string(kr));
           return -1;
      }
@@ -551,7 +599,8 @@ static int update_threads_info(task_t task, task_record_t *tinfo)
      tinfo->threads = threads_count;
      tinfo->threads_arr = malloc(sizeof(thread_record_t*)*threads_count);
 
-     for (i = 0; i < threads_count; i++) {
+     for (i = 0; i < threads_count; i++)
+     {
           thread_basic_info_data_t mach_thread_info;
           mach_msg_type_number_t count = THREAD_BASIC_INFO_COUNT;
 
@@ -559,7 +608,8 @@ static int update_threads_info(task_t task, task_record_t *tinfo)
           tinfo->threads_arr[i] = thread;
           
           kr = thread_info(threads_list[i], THREAD_BASIC_INFO, (thread_info_t)&mach_thread_info, &count);
-          if (kr != KERN_SUCCESS) {
+          if (kr != KERN_SUCCESS)
+          {
                syslog(LOG_INFO, "error in thread_info(basic_info): %s", mach_error_string(kr));
                continue;
           }
@@ -571,7 +621,8 @@ static int update_threads_info(task_t task, task_record_t *tinfo)
           thread->system_time = mach_thread_info.system_time;
           thread->flags = mach_thread_info.flags;
 
-          if ((mach_thread_info.flags & TH_FLAGS_IDLE) == 0) {
+          if ((mach_thread_info.flags & TH_FLAGS_IDLE) == 0)
+          {
                struct timeval tv;
                TIME_VALUE_TO_TIMEVAL(&mach_thread_info.user_time, &tv);
                timeradd(&tinfo->time_user, &tv, &tinfo->time_user);
@@ -581,18 +632,24 @@ static int update_threads_info(task_t task, task_record_t *tinfo)
 
           thread_identifier_info_data_t mach_thread_id_info;
           count = THREAD_IDENTIFIER_INFO_COUNT;
+
           kr = thread_info(threads_list[i], THREAD_IDENTIFIER_INFO, (thread_info_t)&mach_thread_id_info, &count);
-          if (kr != KERN_SUCCESS) {
+
+          if (kr != KERN_SUCCESS)
+          {
                syslog(LOG_INFO, "error in thread_info(id_info): %s", mach_error_string(kr));
                continue;
           }
+    
           thread->thread_id = mach_thread_id_info.thread_id;
 
           kr = mach_port_deallocate(mach_task_self(), threads_list[i]);
-          if (kr != KERN_SUCCESS) {
+          if (kr != KERN_SUCCESS)
+          {
                syslog(LOG_INFO, "%s, error in mach_port_deallocate(): ", __FUNCTION__, mach_error_string(kr));
           }
      }
+
      kr = vm_deallocate(mach_task_self(), (vm_address_t)threads_list, threads_count * sizeof(thread_act_t));
 
      return 0;
@@ -607,7 +664,8 @@ static int get_task_name(const struct kinfo_proc *kinfo, task_record_t *tinfo)
 {
      size_t len;
      
-     if (tinfo->app_name) {
+     if (tinfo->app_name)
+     {
           free(tinfo->app_name);
           tinfo->app_name = NULL;
      }
@@ -615,7 +673,8 @@ static int get_task_name(const struct kinfo_proc *kinfo, task_record_t *tinfo)
      len = strlen(kinfo->kp_proc.p_comm);
      
      tinfo->app_name = strdup(kinfo->kp_proc.p_comm);
-     if (!tinfo->app_name) {
+     if (!tinfo->app_name)
+     {
           return -1;
      }
 
@@ -634,7 +693,9 @@ static int get_kinfo_for_pid(pid_t pid, struct kinfo_proc *kinfo)
      size_t kinfo_len = sizeof(struct kinfo_proc);
 
      res = sysctl(mib, mib_len, kinfo, &kinfo_len, NULL, 0);
-     if (res != 0) {
+
+     if (res != 0)
+     {
           syslog(LOG_INFO, "%s, error in sysctl(): %m", __FUNCTION__);
           return -1;
      }
@@ -673,22 +734,26 @@ char** strings_to_array(const char* strings, const int count)
 {
     int i, l;
     const char *ptr;
-     char **array;
-     if (count == 0) {
-          return NULL;
-     }
+    char **array;
+    if (count == 0)
+    {
+         return NULL;
+    }
 
     array = malloc(count * sizeof(char*));
     if (array == NULL)
         return NULL;
+
     ptr = strings;
      
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < count; i++)
+    {
         l = strlen(ptr) + 1;
         array[i] = malloc(l);
         memcpy(array[i], ptr, l);
         ptr += l;
     }
+
     return array;    
 }
 
@@ -701,7 +766,8 @@ static void extract_app_name(const char *all_arguments, app_path_name_t *path_na
      size_t diff;
      int i;
      
-     if (all_arguments == NULL || path_name == NULL) {
+     if (all_arguments == NULL || path_name == NULL)
+     {
           return;
      }
 
@@ -717,13 +783,16 @@ static void extract_app_name(const char *all_arguments, app_path_name_t *path_na
 		}
 	  
 		app_begin = strrchr(full_path, '/');
-		if (app_begin != NULL) {
+		if (app_begin != NULL)
+        {
 			path_name->app_name = strdup(app_begin+1);
 		}
-		else {
+		else
+        {
 			path_name->app_name = strdup(full_path);
 		}
      }
+
      { // Path to App
           path_name->path_to_executable = strdup(full_path);
 
@@ -731,36 +800,52 @@ static void extract_app_name(const char *all_arguments, app_path_name_t *path_na
           path_name->path_to_app = calloc(sizeof(char), diff + 1);
           strncpy(path_name->path_to_app, full_path, diff);
      }
+
      { // arguments
           while (*(++full_path) != '\0') {}
+
           while (*(++full_path) == '\0') {}
-          if ( path_name->argc > 0) {
+
+          if (path_name->argc > 0)
+          {
                path_name->argv = strings_to_array(full_path, path_name->argc);
-               if (path_name->argv == NULL) {
+
+               if (path_name->argv == NULL)
+               {
                     path_name->argc = 0;
                }
           }
-          for (i = 0; i < path_name->argc; i++) {
+
+          for (i = 0; i < path_name->argc; i++)
+          {
                full_path += strlen(path_name->argv[i]) + 1;
           }
      }
      { // environment variables
           path_name->envc = 0;
           env_begin = full_path;
-          env_begin--; 
-          do {
-               if (*env_begin == '\0') {
-                    if ( *(env_begin+1) == '\0') {
+          env_begin--;
+
+          do
+          {
+               if (*env_begin == '\0')
+               {
+                    if (*(env_begin+1) == '\0')
+                    {
                          break;
                     }
-                    else {
+                    else
+                    {
                          path_name->envc++;
                     }
 
                }
+
                env_begin++;
-          } while (TRUE);
-          path_name->envv = strings_to_array(full_path, path_name->envc);
+          }
+         while (TRUE);
+         
+         path_name->envv = strings_to_array(full_path, path_name->envc);
      }
 }
 
@@ -781,7 +866,9 @@ static void free_arr(void** arr, size_t len)
 {
      size_t i;
      void *data;
-     for (i = 0; i < len; i++) {
+
+     for (i = 0; i < len; i++)
+     {
           data = arr[i];
           free(data);
      }
@@ -820,15 +907,19 @@ static int cpu_type_for_pid(pid_t pid, cpu_type_t *cputype)
      
      *cputype = 0;
      
-     if (miblen == 0) {
+     if (miblen == 0)
+     {
           miblen = CTL_MAXNAME;
           res = sysctlnametomib("sysctl.proc_cputype", mib, &miblen);
-          if (res != 0) {
+
+          if (res != 0)
+          {
                miblen = 0;
           }
      }
 
-     if (miblen > 0) {
+     if (miblen > 0)
+     {
           mib[miblen] = pid;
           size_t len = sizeof(*cputype);
           res = sysctl(mib, miblen + 1, cputype, &len, NULL, 0);

@@ -70,14 +70,14 @@ host_info_dynamic* task_explorer_update_1_svc(argp, rqstp)
      struct svc_req *rqstp;
 {
      static struct host_info_dynamic  result = {};
-	host_record_t* host_record=0;
+	 host_record_t* host_record=0;
 
      task_info_manager_update();
 	
-	host_record = task_manager_get_host_info();
+	 host_record = task_manager_get_host_info();
 
-	result.cpu_user = host_record->cpu_user / processor_count;
-	result.cpu_kernel = host_record->cpu_kernel / processor_count;
+	 result.cpu_user = host_record->cpu_user / processor_count;
+	 result.cpu_kernel = host_record->cpu_kernel / processor_count;
      
      return(&result);
 }
@@ -105,7 +105,9 @@ task_info_base* task_explorer_base_info_1_svc(argp, rqstp)
      memset(&result, 0, sizeof(result));
 
      task_record_t *task = task_info_manager_find_task(*argp);
-     if (task != NULL) {
+
+     if (task != NULL)
+     {
           result.pid = task->pid;
           result.ppid = task->ppid;
           result.cputype = task->cputype;
@@ -118,9 +120,11 @@ task_info_base* task_explorer_base_info_1_svc(argp, rqstp)
           char pwdbuffer[200];
           int  pwdlinelen = sizeof(pwdbuffer);
 
-          if (0 == getpwuid_r(task->uid, pwdptr,pwdbuffer,pwdlinelen,&tempPwdPtr)) {
+          if (0 == getpwuid_r(task->uid, pwdptr,pwdbuffer,pwdlinelen,&tempPwdPtr))
+          {
                strcpy_if(result.user, psw.pw_name, sizeof(result.user));
           }
+
           strcpy_if(result.path_to_boundle, task->path_to_boundle, sizeof(result.path_to_boundle));
           extract_bundle_info(task, &result);
      }
@@ -138,29 +142,37 @@ command_line* task_explorer_params_1_svc(argp, rqstp)
      int i;
 
      task = task_info_manager_find_task(*argp);
-     if (task != NULL) {
-          if (task->argc > 0) {
-               for (i = 0; i < task->argc; i++) {
+     if (task != NULL)
+     {
+          if (task->argc > 0)
+          {
+               for (i = 0; i < task->argc; i++)
+               {
                     len += strlen(task->argv[i]) + 1;
                }
                
-               if (len <= MAX_PARAMS_LEN) {
+               if (len <= MAX_PARAMS_LEN)
+               {
                     free(result);
+
                     result = malloc(len);
                     strcpy(result, task->argv[0]);
-                    for (i = 1; i < task->argc; i++) {
+
+                    for (i = 1; i < task->argc; i++)
+                    {
                          strcat(result, " ");
                          strcat(result, task->argv[i]);
                     }
                }
           }
-          else {
+          else
+          {
                result = malloc(sizeof(""));
                result[0] = 0;
           }
      }
 
-     return(&result);
+     return (&result);
 }
 
 int* kill_process_1_svc(argp, rqstp)
@@ -181,26 +193,34 @@ env_list* task_explorer_env_list_1_svc(argp, rqstp)
      static env_list result;
 
      {
-          env_list tmp, envList = result;    
-          while (envList) {
+          env_list tmp, envList = result;
+
+          while (envList)
+          {
                free(envList->name);
+
                tmp = envList;
                envList = envList->next;
+
                free(tmp);
           }
      }
 
      task_record_t *task = task_info_manager_find_task(*argp);
-     if (task != NULL) {
+
+     if (task != NULL)
+     {
           char **envv = task->envv;
           int i, envc = task->envc;
           env_list node, *nodep = &result;
 
-          for (i = 0; i < envc; i++) {
+          for (i = 0; i < envc; i++)
+          {
                node = *nodep = (env_list)malloc(sizeof(env_node));
                node->name = strdup(envv[i]);
                nodep = &node->next;
           }
+
           *nodep = (env_list)NULL;
      }
      
@@ -216,7 +236,9 @@ task_explorer_dyninfo_1_svc(argp, rqstp)
      memset(&result, 0, sizeof(result));
 
      task_record_t *task = task_info_manager_find_task(*argp);
-     if (task != NULL) {      
+
+     if (task != NULL)
+     {
           result.threads = task->threads;
           result.ports = task->ports;
           result.real_mem_size = task->real_mem_size;
@@ -232,7 +254,7 @@ task_explorer_dyninfo_1_svc(argp, rqstp)
          result.cpu_usage_total = result.cpu_usage_total / processor_count;
      }
 
-     return(&result);
+     return (&result);
 }
 
 files_list* task_explorer_files_list_1_svc(argp, rqstp)
@@ -243,7 +265,8 @@ struct svc_req *rqstp;
 
 	{
 		files_list tmp, filesList = result;
-		while (filesList) {
+		while (filesList)
+        {
 			free(filesList->name);
 			tmp = filesList;
 			filesList = filesList->next;
@@ -255,7 +278,8 @@ struct svc_req *rqstp;
 	files_list node, *nodep = &result;
 	int i;
 
-	for (i = 0; i < list.count; ++i) {
+	for (i = 0; i < list.count; ++i)
+    {
 		node = *nodep = (files_list)malloc(sizeof(files_list));
 		char *name = list.strings[i];
 		int len = strlen(name);
@@ -279,16 +303,24 @@ struct svc_req *rqstp;
 	size_t len = 0;
 
 	task = task_info_manager_find_task(*argp);
-	if (task != NULL) {
+
+	if (task != NULL)
+    {
         const char *descr = man_info_get_descr_by_name(task->app_name);
-        if (NULL != descr) {
+
+        if (NULL != descr)
+        {
             int len = strlen(descr) + 1;
+            int copyLength = len < MAX_APP_DESCR ? len : MAX_APP_DESCR;
+
             free(result);
-            result = malloc(len < MAX_APP_DESCR ? len : MAX_APP_DESCR);
-            strcpy(result, descr);
+
+            result = malloc(copyLength);
+            strncpy(result, descr, copyLength);
         }
-        else {
-            result = malloc(sizeof(""));
+        else
+        {
+            result = malloc(sizeof("")); // What for ???
             result[0] = 0;
         }        
 	}
@@ -309,23 +341,28 @@ struct svc_req *rqstp;
     int i;
 
     {
-        thread_info_list tmp, tinfoList = result;    
-        while (tinfoList) {
+        thread_info_list tmp, tinfoList = result;
+
+        while (tinfoList)
+        {
             free(tinfoList->entry_point_name);
             tmp = tinfoList;
             tinfoList = tinfoList->next;
             free(tmp);
         }
+
         result = 0;
     }
 
 	task = task_info_manager_find_task(*argp);
-	if (task != NULL) {
+	if (task != NULL)
+    {
         threads = task->threads_arr;
 
         thread_info_list node, *nodep = &result;
 
-        for (i = 0; i < task->threads; ++i ) {
+        for (i = 0; i < task->threads; ++i)
+        {
             node = *nodep = calloc(1, sizeof(thread_info_node));
             node->thread_id = threads[i]->thread_id;
             node->user_time = threads[i]->user_time.seconds;
@@ -334,14 +371,17 @@ struct svc_req *rqstp;
             node->run_state = threads[i]->run_state;
             node->sleep_time = threads[i]->sleep_time;
             node->suspend_count = threads[i]->suspend_count;
+
             if (threads[i]->stack_records_count > 0 && threads[i]->call_stack[0]->func_name)
                 node->entry_point_name = strdup(threads[i]->call_stack[0]->func_name);
             else
                 node->entry_point_name = strdup("Invalid stack");
+
             nodep = &node->next;
         }
         *nodep = NULL;
     }
+
 	return(&result);
 }
 
@@ -349,18 +389,22 @@ struct svc_req *rqstp;
 stack_info_list *
 task_explorer_stack_for_thread_1_svc(argp, rqstp)
 struct call_stack_request *argp;
+
 struct svc_req *rqstp;
 {
 	static stack_info_list result;
 
     {
-        stack_info_list tmp, sinfoList = result;    
-        while (sinfoList) {
+        stack_info_list tmp, sinfoList = result;
+
+        while (sinfoList)
+        {
             free(sinfoList->func_name);
             tmp = sinfoList;
             sinfoList = sinfoList->next;
             free(tmp);
         }
+
         result = 0;
     }
     
@@ -369,17 +413,22 @@ struct svc_req *rqstp;
     thread_record_t *thread = 0;
 
     task = task_info_manager_find_task(argp->pid);
-    for (i = 0; i < task->threads; ++i) {
-        if (task->threads_arr[i]->thread_id == argp->tid) {
+    for (i = 0; i < task->threads; ++i)
+    {
+        if (task->threads_arr[i]->thread_id == argp->tid)
+        {
             thread = task->threads_arr[i];
             break;
         }
     }
-    if (thread) {
+
+    if (thread)
+    {
         stack_info_list node, *nodep = &result;
         stack_info_t *sinfo;
 
-        for (i = 0; i < thread->stack_records_count; ++i ) {
+        for (i = 0; i < thread->stack_records_count; ++i)
+        {
             node = *nodep = calloc(1, sizeof(stack_info_node));
 
             sinfo = thread->call_stack[i];
@@ -389,6 +438,7 @@ struct svc_req *rqstp;
 
             nodep = &node->next;
         }
+
         *nodep = NULL;
     }
 

@@ -41,7 +41,9 @@ string_list_t files_list_for_task(int pid)
 	FILE *flsof ;
 
 	sprintf(cmd, cmd_template, pid);
-	if (NULL == (flsof = popen(cmd, "r"))) {
+
+	if (NULL == (flsof = popen(cmd, "r")))
+    {
 		return result;
 	}
 
@@ -51,18 +53,25 @@ string_list_t files_list_for_task(int pid)
 	int i, iter, buf_len = 256;
 	int more_data = 1;
 
-	for (iter = 0; more_data != 0;) {
+	for (iter = 0; more_data != 0;)
+    {
 		files = realloc(files, buf_len*(iter+1)*sizeof(char*));
-		for (i=0; i<buf_len; ++i) {
-			if (fgets(path, 1024, flsof)) {
+
+		for (i=0; i<buf_len; ++i)
+        {
+			if (fgets(path, 1024, flsof))
+            {
 				files[iter*buf_len+i] = strdup(path);
-			} else {
+			}
+            else
+            {
 				item_cout = iter*buf_len+i;
 				more_data = 0;
 				break;
 			}
 		}
 	}
+
 	result.count = item_cout;
 	result.strings = files;
 

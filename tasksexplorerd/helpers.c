@@ -30,20 +30,30 @@
 
 #include "helpers.h"
 
-
+// Copy C-string with validity and length check
 int strcpy_if(char *dest, const char *src, const size_t dest_len)
 {
-	if (dest == NULL || src == NULL) {
-		return;
-	}
+    int result = 0;
+    
+	if (dest == NULL || src == NULL)
+		return result;
+
 	size_t len = strlen(src);
-	if (len >= dest_len) {
-		strncpy(dest, src, dest_len - 1);
-		dest[dest_len-1] = 0;
-		return dest_len;
+
+	if (len >= dest_len)
+    {
+        int copyLength = dest_len - 1;
+
+		strncpy(dest, src, copyLength);
+		dest[copyLength] = '\0';
+        
+		result = dest_len;
 	}
-	else {
+	else
+    {
 		strcpy(dest, src);
-		return len;
+		result = len;
 	}
+    
+    return result;
 }

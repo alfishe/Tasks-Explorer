@@ -46,42 +46,56 @@ int extract_bundle_info(task_record_t *task, task_info_base *task_info)
 {
      int result;
 
-     if (task == NULL || task->bundle_path_name == NULL) {
+     if (task == NULL || task->bundle_path_name == NULL)
+     {
           return -1;
      }
 
      CFURLRef url = CFURLCreateFromFileSystemRepresentation(NULL, (UInt8*)task->bundle_path_name, 
                                                                          strlen(task->bundle_path_name), TRUE);
-     if (url == NULL) {
+     if (url == NULL)
+     {
           return -1;
      }
+
      CFBundleRef bundle = CFBundleCreate(NULL, url);
-     if (bundle == NULL) {
+
+     if (bundle == NULL)
+     {
           CFRelease(url);
           return -1;
      }
      
-     do {
-		if (!is_gui_app(task, bundle)) {
+     do
+     {
+		if (!is_gui_app(task, bundle))
+        {
 			break;
 		}
+
 		update_task_name(task, bundle, task_info);
 
 		result = get_path_to_icon(task, bundle, task_info);
-		if (result != 0) {
+		if (result != 0)
+        {
 			break;
 		}
+
 		result = get_bundle_ver(task, bundle, task_info);
-		if (result != 0) {
+		if (result != 0)
+        {
 			break;
 		}
+
 		result = get_bundle_copyright(task, bundle, task_info);
-		if (result != 0) {
+		if (result != 0)
+        {
 			break;
 		}
 
 		result = 0;
-     } while (FALSE);    
+     }
+     while (FALSE);
      
      CFRelease(bundle);
      CFRelease(url);
@@ -92,15 +106,21 @@ int extract_bundle_info(task_record_t *task, task_info_base *task_info)
 static int update_task_name(task_record_t *task, CFBundleRef bundle, task_info_base *task_info)
 {
      CFTypeRef value = CFBundleGetValueForInfoDictionaryKey(bundle, CFSTR("CFBundleName"));
-     if (value == NULL) {
+
+     if (value == NULL)
+     {
           return -1;
      }
      
-     if (CFGetTypeID( value ) != CFStringGetTypeID()) {
+     if (CFGetTypeID( value ) != CFStringGetTypeID())
+     {
           return -1;
      }
+
      const char *task_name = CFStringGetCStringPtr(value, 0);
-     if (task_name == NULL) {
+
+     if (task_name == NULL)
+     {
           return -1;
      }
 	strcpy(task_info->name, task_name);
@@ -111,16 +131,19 @@ int is_gui_app(task_record_t *task, CFBundleRef bundle)
 	int is_gui=0;
 
 	CFTypeRef value = CFBundleGetValueForInfoDictionaryKey(bundle, CFSTR("CFBundleExecutable"));
-	if (value == NULL) {
+	if (value == NULL)
+    {
 		return is_gui;
 	}
 	
-	if (CFGetTypeID( value ) != CFStringGetTypeID()) {
+	if (CFGetTypeID( value ) != CFStringGetTypeID())
+    {
 		return is_gui;
 	}
 
 	const char *app_name = CFStringGetCStringPtr(value, 0);
-	if (app_name == NULL) {
+	if (app_name == NULL)
+    {
 		return is_gui;
 	}
 	
@@ -132,13 +155,16 @@ int is_gui_app(task_record_t *task, CFBundleRef bundle)
 static int get_path_to_icon(task_record_t *task, CFBundleRef bundle, task_info_base *task_info)
 {
      CFTypeRef value = CFBundleGetValueForInfoDictionaryKey(bundle, CFSTR("CFBundleIconFile"));
-     if (value == NULL) {
+     if (value == NULL)
+     {
           return -1;
      }
      
-     if (CFGetTypeID( value ) != CFStringGetTypeID()) {
+     if (CFGetTypeID( value ) != CFStringGetTypeID())
+     {
           return -1;
      }
+
      const char *icon_name = CFStringGetCStringPtr(value, 0);
      if (icon_name == NULL) {
           return -1;
@@ -146,13 +172,18 @@ static int get_path_to_icon(task_record_t *task, CFBundleRef bundle, task_info_b
      
      static const char int_path[] = "/Contents/Resources/";
      static const char icns[] = ".icns";
-     if (sizeof(task_info->path_to_icon) < (strlen(task->bundle_path_name) + sizeof(int_path) + strlen(icon_name) + sizeof(icns))) {
+
+     if (sizeof(task_info->path_to_icon) < (strlen(task->bundle_path_name) + sizeof(int_path) + strlen(icon_name) + sizeof(icns)))
+     {
           return -1;
      }
+
      strcpy(task_info->path_to_icon, task->bundle_path_name);
      strcat(task_info->path_to_icon, int_path);
      strcat(task_info->path_to_icon, icon_name);
-     if (strstr(icon_name, icns) == NULL) {
+
+     if (strstr(icon_name, icns) == NULL)
+     {
           strcat(task_info->path_to_icon, icns);
      }
      
@@ -162,13 +193,17 @@ static int get_path_to_icon(task_record_t *task, CFBundleRef bundle, task_info_b
 static int get_bundle_ver(task_record_t *task, CFBundleRef bundle, task_info_base *task_info)
 {
      CFTypeRef value = CFBundleGetValueForInfoDictionaryKey(bundle, CFSTR("CFBundleShortVersionString"));
-     if (value == NULL) {
+
+     if (value == NULL)
+     {
           return 0;
      }
      
-     if (CFGetTypeID( value ) != CFStringGetTypeID()) {
+     if (CFGetTypeID( value ) != CFStringGetTypeID())
+     {
           return 0;
      }
+
      CFStringGetCString(value, task_info->bundle_ver, sizeof(task_info->bundle_ver), kCFStringEncodingMacRoman);
      
      return 0;
@@ -177,16 +212,22 @@ static int get_bundle_ver(task_record_t *task, CFBundleRef bundle, task_info_bas
 static int get_bundle_copyright(task_record_t *task, CFBundleRef bundle, task_info_base *task_info)
 {
      CFTypeRef value = CFBundleGetValueForInfoDictionaryKey(bundle, CFSTR("NSHumanReadableCopyright"));
-     if (value == NULL) {
+
+     if (value == NULL)
+     {
           value = CFBundleGetValueForInfoDictionaryKey(bundle, CFSTR("CFBundleGetInfoString"));
-          if (value == NULL) {
+
+          if (value == NULL)
+          {
                return 0;
           }
      }
      
-     if (CFGetTypeID( value ) != CFStringGetTypeID()) {
+     if (CFGetTypeID( value ) != CFStringGetTypeID())
+     {
           return 0;
      }
+
      CFStringGetCString(value, task_info->bundle_copyright, sizeof(task_info->bundle_copyright), kCFStringEncodingMacRoman);
      
      return 0;
